@@ -13,6 +13,7 @@ from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 from .const import (
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
+    CONFIG_PRESENCE_CALCULATION,
     CONFIG_TEMPERATURE_CALCULATION
 )
 
@@ -123,6 +124,7 @@ CALCULATE = {
 DEFAULT_CALCULATION_ILLUMINANCE = CALCULATE_LAST
 DEFAULT_CALCULATION_TEMPERATURE = CALCULATE_MEAN
 DEFAULT_CALCULATION_HUMIDITY = CALCULATE_MAX
+DEFAULT_CALCULATION_PRESENCE = CALCULATE_ALL
 
 
 def get_calculation_key(
@@ -144,7 +146,11 @@ def get_calculation_key(
         return config_options.get(
             CONFIG_HUMIDITY_CALCULATION,
             DEFAULT_CALCULATION_HUMIDITY)
-
+    if sensor_type in [BinarySensorDeviceClass.MOTION, BinarySensorDeviceClass.PRESENCE, BinarySensorDeviceClass.OCCUPANCY]:
+        return config_options.get(
+            CONFIG_PRESENCE_CALCULATION,
+            DEFAULT_CALCULATION_PRESENCE
+        )
     return None
 
 

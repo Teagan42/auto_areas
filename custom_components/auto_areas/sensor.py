@@ -27,7 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class IlluminanceSensor(
-    AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity
+    AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity
 ):
     """Set up aggregated illuminance sensor."""
 
@@ -47,13 +47,8 @@ class IlluminanceSensor(
         """Return unit of measurement."""
         return LIGHT_LUX
 
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state
 
-
-class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
+class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
     """Set up aggregated temperature sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
@@ -72,13 +67,8 @@ class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntit
         """Return unit of measurement."""
         return self.hass.config.units.temperature_unit
 
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state
 
-
-class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
+class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
     """Set up aggregated humidity sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
@@ -96,8 +86,3 @@ class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
     def native_unit_of_measurement(self) -> str | None:
         """Return unit of measurement."""
         return PERCENTAGE
-
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state

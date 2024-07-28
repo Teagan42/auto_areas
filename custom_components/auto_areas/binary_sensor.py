@@ -33,7 +33,8 @@ async def async_setup_entry(hass, entry, async_add_entities: AddEntitiesCallback
 
 
 class PresenceBinarySensor(
-    AutoEntity[BinarySensorEntity, BinarySensorDeviceClass], BinarySensorEntity
+    AutoEntity[BinarySensorEntity,
+               BinarySensorDeviceClass, bool], BinarySensorEntity
 ):
     """Set up aggregated presence binary sensor."""
 
@@ -46,13 +47,15 @@ class PresenceBinarySensor(
             PRESENCE_BINARY_SENSOR_PREFIX,
             PRESENCE_BINARY_SENSOR_ENTITY_PREFIX
         )
-        self.presence: bool | None = None
         LOGGER.debug("Presence entities %s", self.entity_ids)
 
     @cached_property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        return self.presence
+        if not isinstance(self._aggregated_state, bool):
+            return None
+
+        return self._aggregated_state
 
     @cached_property
     def state(self) -> Literal["on", "off"] | None:  # type: ignore
@@ -70,71 +73,3 @@ class PresenceBinarySensor(
             if entity.device_class in PRESENCE_BINARY_SENSOR_DEVICE_CLASSES
             or entity.original_device_class in PRESENCE_BINARY_SENSOR_DEVICE_CLASSES
         ]
-
-    @override
-    async def async_added_to_hass(self):
-        """Start tracking sensors."""
-        LOGGER.debug(
-            "%s: Presence detection entities %s",
-            self.auto_area.area_name,
-            self.entity_ids,
-        )
-
-        # Set initial presence
-        self.presence = not all_states_are_off(
-            self.hass,
-            self.entity_ids,
-            PRESENCE_ON_STATES,
-        )
-        self.schedule_update_ha_state()
-
-        LOGGER.info(
-            "%s: Initial presence %s",
-            self.auto_area.area_name,
-            self.presence
-        )
-
-        # Subscribe to state changes
-        await self.track_state_changes()
-
-    @override
-    async def _handle_state_change(self, event: Event[EventStateChangedData]) -> None:
-        """Handle state change of any tracked presence sensors."""
-        entity_id = event.data.get('entity_id')
-        from_state = event.data.get('old_state')
-        to_state = event.data.get('new_state')
-
-        previous_state = from_state.state if from_state else ""
-        current_state = to_state.state if to_state else ""
-
-        LOGGER.debug("presence sensor handling state change %s", current_state)
-
-        if previous_state == current_state:
-            return
-
-        LOGGER.debug(
-            "%s: State change %s: %s -> %s",
-            self.auto_area.area_name,
-            entity_id,
-            previous_state,
-            current_state,
-        )
-
-        if current_state in PRESENCE_ON_STATES:
-            if not self.presence:
-                LOGGER.info("%s: Presence detected", self.auto_area.area_name)
-                self.presence = True
-                self.schedule_update_ha_state()
-        else:
-            if all_states_are_off(
-                self.hass,
-                self.entity_ids,
-                PRESENCE_ON_STATES,
-            ):
-                if self.presence:
-                    LOGGER.info(
-                        "%s: Presence cleared",
-                        self.auto_area.area_name
-                    )
-                    self.presence = False
-                    self.schedule_update_ha_state()

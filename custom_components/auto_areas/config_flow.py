@@ -27,6 +27,7 @@ from .auto_area import AutoAreasError, AutoArea
 from .const import (
     CONFIG_AREA,
     CONFIG_LIGHT_CONTROL,
+    CONFIG_PRESENCE_CALCULATION,
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
     CONFIG_IS_SLEEPING_AREA,
@@ -44,6 +45,10 @@ from .calculations import (
     DEFAULT_CALCULATION_ILLUMINANCE,
     DEFAULT_CALCULATION_TEMPERATURE,
     DEFAULT_CALCULATION_HUMIDITY,
+    DEFAULT_CALCULATION_PRESENCE,
+    CALCULATE_ALL,
+    CALCULATE_NONE,
+    CALCULATE_ONE,
     CALCULATE_LAST,
     CALCULATE_MAX,
     CALCULATE_MEAN,
@@ -181,6 +186,24 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         )  # type: ignore
                     ): selector.BooleanSelector(
                         selector.BooleanSelectorConfig()
+                    ),
+                    vol.Required(
+                        CONFIG_PRESENCE_CALCULATION,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_PRESENCE_CALCULATION,
+                            DEFAULT_CALCULATION_PRESENCE
+                        )  # type: ignore
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                CALCULATE_ALL,
+                                CALCULATE_ONE,
+                                CALCULATE_NONE,
+                                CALCULATE_LAST,
+                            ],
+                            multiple=False,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
                     ),
                     vol.Required(
                         CONFIG_IS_SLEEPING_AREA,

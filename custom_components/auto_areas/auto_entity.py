@@ -1,17 +1,17 @@
 """Base auto-entity class."""
 
 from functools import cached_property
-from typing import Any, Generic, Mapping, TypeVar, cast
+from typing import Any, Collection, Generic, Mapping, TypeVar, cast
 
 from homeassistant.core import (
-    Event, EventStateChangedData, State, HomeAssistant, CALLBACK_TYPE
+    Event, EventStateChangedData, State, HomeAssistant, CALLBACK_TYPE,
+    callback
 )
-from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE, EVENT_STATE_CHANGED
+from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.typing import StateType
+from homeassistant.helpers import start
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.event import async_track_state_change_event
 
@@ -23,10 +23,12 @@ from .const import (CONFIG_EXCLUDED_HUMIDITY_ENTITIES, CONFIG_EXCLUDED_ILLUMINAN
 _TDeviceClass = TypeVar(
     "_TDeviceClass", BinarySensorDeviceClass, SensorDeviceClass)
 _TEntity = TypeVar("_TEntity", bound=Entity)
+_TState = TypeVar("_TState")
 
 
-class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
+class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
     """Set up an aggregated entity."""
+    _attr_should_poll = False
 
     def __init__(self,
                  hass: HomeAssistant,
@@ -37,7 +39,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
                  ) -> None:
         """Initialize sensor."""
         super().__init__()
-        self.should_poll = False
         self.hass = hass
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
@@ -45,11 +46,12 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
+        self._check_entities: bool = False
 
         self.entity_ids: list[str] = []
 
-        self._aggregated_state: StateType = None
-        self.unsubscribe: CALLBACK_TYPE | None = None
+        self._aggregated_state: _TState | str | None = None
+        self._async_unsub_state_changed: CALLBACK_TYPE | None = None
         LOGGER.info(
             "%s: Initialized %s sensor",
             self.auto_area.area_name,
@@ -119,88 +121,152 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
     async def async_added_to_hass(self):
         """Start tracking sensors."""
-        LOGGER.debug(
-            "%s: %s sensor entities: %s",
-            self.auto_area.area_name,
-            self.device_class,
-            self.entity_ids,
+        @callback
+        def async_state_changed_listener(
+            event: Event[EventStateChangedData],
+        ) -> None:
+            """Handle child updates."""
+            self.async_set_context(event.context)
+            self.async_defer_or_update_ha_state()
+
+        self.entity_ids = self.get_sensor_entities()
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, self.entity_ids, async_state_changed_listener
+            )
         )
+        self.async_on_remove(start.async_at_start(
+            self.hass, self._update_at_start))
 
-        # Subscribe to state changes
-        await self._track_state_changes()
+    async def _async_state_changed_listener(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Respond to a member state changing.
 
-    async def _track_state_changes(self) -> None:
-        """Track entity state changes."""
-        entity_ids = self.get_sensor_entities()
-        if sorted(entity_ids) == sorted(self.entity_ids):
-            return
-        if self.unsubscribe:
-            try:
-                self.unsubscribe()
-            except ValueError:
-                pass
-        self.unsubscribe = None
-        self.entity_ids = entity_ids
-        for entity_id in [entity_id for entity_id in self.entity_states.keys() if entity_id not in entity_ids]:
-            self.entity_states.pop(entity_id, None)
-        for entity_id in [entity_id for entity_id in entity_ids if entity_id not in self.entity_states]:
-            state = self.hass.states.get(entity_id)
-            await self._handle_state_change(Event(EVENT_STATE_CHANGED, data=EventStateChangedData(
-                entity_id=entity_id, new_state=state, old_state=None)))
-
-        self.unsubscribe = async_track_state_change_event(
-            self.hass,
-            self.entity_ids,
-            self._handle_state_change,
-        )
-
-    async def track_state_changes(self) -> None:
-        """Track entity state changes."""
-        entity_ids = self.get_sensor_entities()
-        if sorted(entity_ids) == sorted(self.entity_ids):
-            return
-        await self._track_state_changes()
-
-    async def _handle_state_change(self, event: Event[EventStateChangedData]):
-        """Handle state change of any tracked illuminance sensors."""
-        to_state = event.data.get("new_state")
-        if to_state is None:
+        This method must be run in the event loop.
+        """
+        # removed
+        if self._async_unsub_state_changed is None:
             return
 
-        if to_state.state is not None and to_state.state in [
-            STATE_UNKNOWN,
-            STATE_UNAVAILABLE,
-        ]:
-            self.entity_states.pop(to_state.entity_id, None)
-        else:
-            try:
-                to_state.state = float(to_state.state)  # type: ignore
-                self.entity_states[to_state.entity_id] = to_state
-            except ValueError:
-                self.entity_states.pop(to_state.entity_id, None)
+        self.async_set_context(event.context)
+
+        if (new_state := event.data["new_state"]) is None:
+            # The state was removed from the state machine
+            self._reset_tracked_state()
+
+        self._async_update_group_state(new_state)
+        self.async_write_ha_state()
+
+    def _reset_tracked_state(self) -> None:
+        """Reset tracked state."""
+        self.entity_ids = self.get_sensor_entities()
+        self.entity_states = {}
+        for entity_id in self.entity_ids:
+            if (state := self.hass.states.get(entity_id)) is not None:
+                self._see_state(state)
+
+    @callback
+    def _async_update_group_state(self, new_state: State | None = None) -> None:
+        """Update group state."""
+        if new_state:
+            self._see_state(new_state)
 
         self._aggregated_state = self._get_state()
 
-        LOGGER.debug(
-            "%s %s: got state %s, %d entities",
-            self.auto_area.area_name,
-            self.device_class,
-            str(self.state),
-            len(self.entity_states.values())
-        )
+    @callback
+    def _async_stop(self) -> None:
+        """Unregister the group from Home Assistant.
 
-        self.schedule_update_ha_state()
+        This method must be run in the event loop.
+        """
+        if self._async_unsub_state_changed:
+            self._async_unsub_state_changed()
+            self._async_unsub_state_changed = None
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Clean up event listeners."""
-        if self.unsubscribe:
+    @callback
+    def _async_start_tracking(self) -> None:
+        """Start tracking members.
+
+        This method must be run in the event loop.
+        """
+        if self.entity_ids and self._async_unsub_state_changed is None:
+            self._async_unsub_state_changed = async_track_state_change_event(
+                self.hass, self.entity_ids, self._async_state_changed_listener
+            )
+
+        self._async_update_group_state()
+
+    @callback
+    def _async_start(self, _: HomeAssistant | None = None) -> None:
+        """Start tracking members and write state."""
+        self._reset_tracked_state()
+        self._async_start_tracking()
+        self.async_write_ha_state()
+
+    @callback
+    def async_update_tracked_entity_ids(
+        self
+    ) -> None:
+        """Update the member entity IDs.
+
+        This method must be run in the event loop.
+        """
+        if sorted(self.entity_ids) == sorted(self.get_sensor_entities()):
+            return
+        self._async_stop()
+        self._reset_tracked_state()
+        self._async_start()
+
+    def _set_tracked(self, entity_ids: Collection[str] | None) -> None:
+        """Tuple of entities to be tracked."""
+        # tracking are the entities we want to track
+        # trackable are the entities we actually watch
+
+        if not entity_ids:
+            self.tracking = ()
+            self.trackable = ()
+            self.single_state_type_key = None
+            return
+
+    @callback
+    def async_update_group_state(self) -> None:
+        """Abstract method to update the entity."""
+        self._async_update_group_state()
+
+    @callback
+    def _update_at_start(self, _: HomeAssistant) -> None:
+        """Update the group state at start."""
+        self.async_update_group_state()
+        self.async_write_ha_state()
+
+    @callback
+    def async_defer_or_update_ha_state(self) -> None:
+        """Only update once at start."""
+        if not self.hass.is_running:
+            return
+
+        self.async_update_group_state()
+        self.async_write_ha_state()
+
+    def _see_state(self, state: State | None) -> None:
+        """Keep track of the state."""
+        if state is None:
+            return
+        if state.state is not None and state.state in [
+            STATE_UNKNOWN,
+            STATE_UNAVAILABLE,
+        ]:
+            self.entity_states.pop(state.entity_id, None)
+        else:
             try:
-                self.unsubscribe()
+                to_state.state = float(to_state.state)  # type: ignore
+                self.entity_states[state.entity_id] = state
             except ValueError:
-                pass
-        self.unsubscribe = None
+                self.entity_states.pop(state.entity_id, None)
 
-    def _get_state(self) -> StateType | None:
+    def _get_state(self) -> _TState | str | None:
         """Get the state of the sensor."""
         if len(self.entity_ids) == 0:
             return STATE_UNAVAILABLE
@@ -217,4 +283,4 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             )
             return None
 
-        return calculate_state(list(self.entity_states.values()))
+        return cast(_TState | str | None, calculate_state(list(self.entity_states.values())))

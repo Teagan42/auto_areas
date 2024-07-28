@@ -53,7 +53,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoArea):
     """Initialize component."""
 
-    async def async_entity_registry_updated(event: Event[EventEntityRegistryUpdatedData]) -> None:
+    @callback
+    def async_entity_registry_updated(event: Event[EventEntityRegistryUpdatedData]) -> None:
         """Handle entity registry updated event."""
         if event.data["action"] == "update":
             if event.data["changes"].get("area_id", None) != auto_area.area_id:
@@ -66,9 +67,10 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
             if sorted(current_ids) == sorted(new_ids):
                 # No change in entity ids, check next auto entity
                 continue
-            await auto_entity.track_state_changes()
+            auto_entity.async_update_tracked_entity_ids()
 
-    async def async_area_registry_updated(event: Event[EventAreaRegistryUpdatedData]) -> None:
+    @callback
+    def async_area_registry_updated(event: Event[EventAreaRegistryUpdatedData]) -> None:
         """Handle area registry updated."""
         if event.data["area_id"] != auto_area.area_id:
             return
@@ -78,9 +80,10 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
             if sorted(current_ids) == sorted(new_ids):
                 # No change in entity ids, check next auto entity
                 continue
-            await auto_entity.track_state_changes()
+            auto_entity.async_update_tracked_entity_ids()
 
-    async def async_device_registry_updated(event: Event[EventDeviceRegistryUpdatedData]) -> None:
+    @callback
+    def async_device_registry_updated(event: Event[EventDeviceRegistryUpdatedData]) -> None:
         """Handle device registry updated."""
         if event.data["action"] == "update":
             if event.data["changes"].get("area_id", None) != auto_area.area_id:
@@ -91,7 +94,7 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
             if sorted(current_ids) == sorted(new_ids):
                 # No change in entity ids, check next auto entity
                 continue
-            await auto_entity.track_state_changes()
+            auto_entity.async_update_tracked_entity_ids()
 
     await asyncio.sleep(5)  # wait for all area devices to be initialized
     await auto_area.async_initialize()
