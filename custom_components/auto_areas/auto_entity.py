@@ -150,8 +150,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             await self._handle_state_change(Event(EVENT_STATE_CHANGED, data=EventStateChangedData(
                 entity_id=entity_id, new_state=state, old_state=None)))
 
-        self._aggregated_state = self._get_state()
-        self.schedule_update_ha_state()
+        LOGGER.info("%s - States %s", self.entity_id,
+                    ",".join([f"{k}: {v.state}" for k, v in self.entity_states.items()]))
 
         self.unsubscribe = async_track_state_change_event(
             self.hass,
@@ -186,7 +186,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
         self._aggregated_state = self._get_state()
 
-        LOGGER.debug(
+        LOGGER.info(
             "%s: got state %s, %d entities",
             self.device_class,
             str(self.state),
