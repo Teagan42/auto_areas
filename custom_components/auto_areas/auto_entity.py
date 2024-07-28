@@ -141,7 +141,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             except ValueError:
                 pass
         self.unsubscribe = None
-        LOGGER.info("%s - Found %s", self.entity_id, ",".join(self.entity_ids))
+        LOGGER.info("%s - Found %s", self.entity_id, ",".join(entity_ids))
         self.entity_ids = entity_ids
         for entity_id in [entity_id for entity_id in self.entity_states.keys() if entity_id not in entity_ids]:
             self.entity_states.pop(entity_id, None)
