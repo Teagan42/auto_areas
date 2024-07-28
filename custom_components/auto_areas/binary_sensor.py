@@ -16,6 +16,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from .ha_helpers import all_states_are_off
 from .auto_entity import AutoEntity
 from .auto_area import AutoArea
+from .calculations import bool_states
 from .const import (
     DOMAIN,
     LOGGER,
@@ -73,3 +74,13 @@ class PresenceBinarySensor(
             if entity.device_class in PRESENCE_BINARY_SENSOR_DEVICE_CLASSES
             or entity.original_device_class in PRESENCE_BINARY_SENSOR_DEVICE_CLASSES
         ]
+
+    @override
+    def _get_state(self) -> bool | str | None:
+        self._attr_native_value = super()._get_state()
+        bools = bool_states(list(self.entity_states.values()))
+        self._extra_attributes = {
+            "num_false": len([b for b in bools if not b]),
+            "num_true": len([b for b in bools if b])
+        }
+        return self._attr_native_value

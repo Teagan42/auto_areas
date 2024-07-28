@@ -39,14 +39,32 @@ def is_bool(state: State) -> bool:
     """Check if state is a boolean."""
     try:
         return isinstance(state.state, bool) or state.state in [
-            "on", "yes", "true", "1", True, 1]
+            "on", "off", "yes", "no", "true", "false", "1", "0", True, False, 1, 0]
     except Exception:
         return False
 
 
+def as_bool(state: State) -> bool:
+    """Convert state to a boolean."""
+    if isinstance(state.state, bool):
+        return bool(state.state)
+    return state.state in [
+        "on", "yes", "true", "1", True, 1]
+
+
+def float_states(states: list[State]) -> list[float]:
+    """Filter and retrieve floats from list of states."""
+    return [float(s.state) for s in states if is_float(s)]
+
+
+def bool_states(states: list[State]) -> list[bool]:
+    """Filter and retrieve bools from list of states."""
+    return [as_bool(s) for s in states if is_bool(s)]
+
+
 def calculate_max(states: list[State]) -> StateType:
     """Calculate the maximum of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return max(calc_values)
@@ -54,7 +72,7 @@ def calculate_max(states: list[State]) -> StateType:
 
 def calculate_min(states: list[State]) -> StateType:
     """Calculate the min of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return min(calc_values)
@@ -62,7 +80,7 @@ def calculate_min(states: list[State]) -> StateType:
 
 def calculate_mean(states: list[State]) -> StateType:
     """Calculate the mean of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return mean(calc_values)
@@ -70,7 +88,7 @@ def calculate_mean(states: list[State]) -> StateType:
 
 def calculate_median(states: list[State]) -> StateType:
     """Calculate the median of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return median(calc_values)
@@ -78,7 +96,7 @@ def calculate_median(states: list[State]) -> StateType:
 
 def calculate_all(states: list[State]) -> StateType:
     """Calculate whether all of the list of values are true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if not v]) == 0
@@ -86,7 +104,7 @@ def calculate_all(states: list[State]) -> StateType:
 
 def calculate_one(states: list[State]) -> StateType:
     """Calculate whether one of the list of values is true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if v]) > 0
@@ -94,7 +112,7 @@ def calculate_one(states: list[State]) -> StateType:
 
 def calculate_none(states: list[State]) -> StateType:
     """Calculate whether none of the list of values is true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if v]) == 0

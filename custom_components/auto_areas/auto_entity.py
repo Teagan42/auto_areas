@@ -43,6 +43,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
         self.entity_states: dict[str, State] = {}
+        self._extra_attributes: dict[str, Any] = {}
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
@@ -116,7 +117,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
                 self.auto_area.config_entry.options,
                 self.device_class
             ),
-            "entities": {state.entity_id: state.state for state in self.entity_states.values()}
+            "entities": {state.entity_id: state.state for state in self.entity_states.values()},
+            **self._extra_attributes
         }
 
     async def async_added_to_hass(self):

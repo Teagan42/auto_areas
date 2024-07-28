@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.const import LIGHT_LUX, PERCENTAGE
 
 from .auto_entity import AutoEntity
-
+from .calculations import calculate_min, calculate_max
 from .auto_area import AutoArea
 from .const import DOMAIN, HUMIDITY_SENSOR_ENTITY_PREFIX, HUMIDITY_SENSOR_PREFIX, ILLUMINANCE_SENSOR_ENTITY_PREFIX, ILLUMINANCE_SENSOR_PREFIX, TEMPERATURE_SENSOR_ENTITY_PREFIX, TEMPERATURE_SENSOR_PREFIX
 
@@ -32,6 +32,10 @@ class AutoSensorEntity(AutoEntity[SensorEntity, SensorDeviceClass, float], Senso
     @override
     def _get_state(self) -> float | str | None:
         self._attr_native_value = super()._get_state()
+        self._extra_attributes = {
+            "min": calculate_min(list(self.entity_states.values())),
+            "max": calculate_max(list(self.entity_states.values()))
+        }
         return self._attr_native_value
 
 
