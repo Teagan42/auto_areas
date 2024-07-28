@@ -125,8 +125,9 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         # Get all current states
         for entity_id in self.entity_ids:
             state = self.hass.states.get(entity_id)
-            if state is not None:
+            if state is not None and state.state not in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
                 try:
+                    state.state = float(state.state)  # type: ignore
                     self.entity_states[entity_id] = state
                 except ValueError:
                     LOGGER.warning(
@@ -167,7 +168,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         if to_state is None:
             return
 
-        if to_state.state in [
+        if to_state.state is not None and to_state.state in [
             STATE_UNKNOWN,
             STATE_UNAVAILABLE,
         ]:
