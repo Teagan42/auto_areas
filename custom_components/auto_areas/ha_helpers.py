@@ -12,6 +12,7 @@ def get_all_entities(
     device_registry: DeviceRegistry,
     area_id: str,
     domains: list[str] | None = None,
+    device_class: list[str] | None = None
 ) -> list[RegistryEntry]:
     """Return all entities from an area."""
     entities: list[RegistryEntry] = []
@@ -21,6 +22,9 @@ def get_all_entities(
             continue
 
         if domains is None or entity.domain not in domains:
+            continue
+
+        if device_class is not None and entity.device_class not in device_class:
             continue
 
         entities.append(entity)

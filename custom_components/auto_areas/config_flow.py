@@ -17,7 +17,7 @@ from homeassistant.helpers import (
 import homeassistant.helpers.selector as selector
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor.const import SensorDeviceClass
+from homeassistant.components.sensor.const import SensorDeviceClass, DOMAIN as SENSOR_DOMAIN
 from homeassistant.data_entry_flow import FlowResult
 
 from custom_components.auto_areas.calculations import (
@@ -40,6 +40,9 @@ from .const import (
     CONFIG_EXCLUDED_LIGHT_ENTITIES,
     CONFIG_AUTO_LIGHTS_MAX_ILLUMINANCE,
     CONFIG_TEMPERATURE_CALCULATION,
+    CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+    CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+    CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
     DOMAIN,
     LOGGER,
 )
@@ -200,13 +203,43 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         default=DEFAULT_CALCULATION_ILLUMINANCE,  # type: ignore
                     ): self.sensor_selector,
                     vol.Required(
+                        CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+                        default=[]  # type: ignore
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            include_entities=self._get_entities(
+                                SensorDeviceClass.ILLUMINANCE),
+                            multiple=True
+                        )
+                    ),
+                    vol.Required(
                         CONFIG_TEMPERATURE_CALCULATION,
                         default=DEFAULT_CALCULATION_TEMPERATURE,  # type: ignore
                     ): self.sensor_selector,
                     vol.Required(
+                        CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
+                        default=[]  # type: ignore
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            include_entities=self._get_entities(
+                                SensorDeviceClass.TEMPERATURE),
+                            multiple=True
+                        )
+                    ),
+                    vol.Required(
                         CONFIG_HUMIDITY_CALCULATION,
                         default=DEFAULT_CALCULATION_HUMIDITY,  # type: ignore
                     ): self.sensor_selector,
+                    vol.Required(
+                        CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+                        default=[]  # type: ignore
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            include_entities=self._get_entities(
+                                SensorDeviceClass.HUMIDITY),
+                            multiple=True
+                        )
+                    ),
                 }
             ),
         )
@@ -225,6 +258,25 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 device_registry,
                 area_id,
                 [LIGHT_DOMAIN],
+            )
+        ]
+        return entities
+
+    def _get_entities(self, device_class: str) -> list[str]:
+        """Return a list of selectable entities."""
+        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
+        area_id = self.config_entry.data.get(CONFIG_AREA)
+        if area_id is None:
+            raise ValueError(f"Missing {CONFIG_AREA} configruation value.")
+        entities = [
+            entity.entity_id
+            for entity in get_all_entities(
+                entity_registry,
+                device_registry,
+                area_id,
+                domains=[SENSOR_DOMAIN],
+                device_class=[device_class]
             )
         ]
         return entities

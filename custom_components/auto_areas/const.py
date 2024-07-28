@@ -53,6 +53,9 @@ CONFIG_AUTO_LIGHTS_MAX_ILLUMINANCE = "auto_lights_illuminance_threshold"
 CONFIG_HUMIDITY_CALCULATION = "humidity_calculation"
 CONFIG_TEMPERATURE_CALCULATION = "temperature_calculation"
 CONFIG_ILLUMINANCE_CALCULATION = "illuminance_calculation"
+CONFIG_EXCLUDED_HUMIDITY_ENTITIES = "exclused_humidity_entities"
+CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES = "exclused_illuminance_entities"
+CONFIG_EXCLUDED_TEMPERATURE_ENTITIES = "exclused_temperature_entities"
 
 #
 

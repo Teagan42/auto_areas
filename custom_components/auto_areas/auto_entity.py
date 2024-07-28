@@ -15,7 +15,8 @@ from homeassistant.helpers.event import async_track_state_change_event
 from custom_components.auto_areas.calculations import get_calculation
 
 from .auto_area import AutoArea
-from .const import DOMAIN, LOGGER, NAME, VERSION
+from .const import (CONFIG_EXCLUDED_HUMIDITY_ENTITIES, CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+                    CONFIG_EXCLUDED_TEMPERATURE_ENTITIES, DOMAIN, LOGGER, NAME, VERSION)
 
 _TDeviceClass = TypeVar(
     "_TDeviceClass", BinarySensorDeviceClass, SensorDeviceClass)
@@ -51,13 +52,24 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             self.device_class
         )
 
+    @property
+    def _excluded_entities(self) -> list[str]:
+        """Retrieve excluded entities."""
+        if self._device_class == SensorDeviceClass.TEMPERATURE:
+            return self.auto_area.config_entry.options.get(CONFIG_EXCLUDED_TEMPERATURE_ENTITIES, [])
+        if self._device_class == SensorDeviceClass.HUMIDITY:
+            return self.auto_area.config_entry.options.get(CONFIG_EXCLUDED_HUMIDITY_ENTITIES, [])
+        if self._device_class == SensorDeviceClass.ILLUMINANCE:
+            return self.auto_area.config_entry.options.get(CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES, [])
+        return []
+
     def _get_sensor_entities(self) -> list[str]:
         """Retrieve all relevant entity ids for this sensor."""
         return [
             entity.entity_id
             for entity in self.auto_area.get_valid_entities()
-            if entity.device_class == self.device_class
-            or entity.original_device_class == self.device_class
+            if (entity.device_class == self.device_class
+                or entity.original_device_class == self.device_class) and entity.entity_id not in self._excluded_entities
         ]
 
     @cached_property
@@ -152,6 +164,9 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
     def _get_state(self) -> StateType | None:
         """Get the state of the sensor."""
+        if len(self.entity_ids) == 0:
+            return STATE_UNAVAILABLE
+
         calculate_state = get_calculation(
             self.auto_area.config_entry.options,
             self.device_class
