@@ -43,7 +43,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self._debouncer = Debouncer(
             hass,
             LOGGER,
-            cooldown=1,
+            cooldown=0.5,
             immediate=False,
             function=self._track_state_changes
         )
@@ -169,6 +169,9 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
     async def track_state_changes(self) -> None:
         """Track entity state changes."""
+        entity_ids = self.get_sensor_entities()
+        if sorted(entity_ids) == sorted(self.entity_ids):
+            return
         await self._debouncer.async_call()
 
     async def _handle_state_change(self, event: Event[EventStateChangedData]):
