@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import LIGHT_LUX, PERCENTAGE
+from homeassistant.const import LIGHT_LUX, PERCENTAGE, STATE_UNKNOWN
 
 from .auto_entity import AutoEntity
 from .calculations import calculate_min, calculate_max
@@ -32,10 +32,14 @@ class AutoSensorEntity(AutoEntity[SensorEntity, SensorDeviceClass, float], Senso
     @override
     def _get_state(self) -> float | str | None:
         self._attr_native_value = super()._get_state()
-        self._extra_attributes = {
-            "min": calculate_min(list(self.entity_states.values())),
-            "max": calculate_max(list(self.entity_states.values()))
-        }
+        values = list(self.entity_states.values())
+        if len(values) == 0:
+            self._extra_attributes = {}
+        else:
+            self._extra_attributes = {
+                "min": calculate_min(values),
+                "max": calculate_max(values)
+            }
         return self._attr_native_value
 
 
