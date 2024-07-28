@@ -100,6 +100,7 @@ class AutoArea:
                 self.device_registry,
                 self.area_id or "",
                 RELEVANT_DOMAINS,
+                exclude_auto_areas=True
             )
             if is_valid_entity(self.hass, entity)
         ]

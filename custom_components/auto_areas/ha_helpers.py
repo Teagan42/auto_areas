@@ -2,7 +2,7 @@
 from typing import Optional
 import logging
 from homeassistant.core import HomeAssistant
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
 
@@ -77,7 +77,7 @@ def is_valid_entity(hass: HomeAssistant, entity: RegistryEntry) -> bool:
         return False
 
     entity_state = hass.states.get(entity.entity_id)
-    if entity_state and entity_state.state == STATE_UNAVAILABLE:
+    if not entity_state or entity_state.state == STATE_UNAVAILABLE or entity_state.state == STATE_UNKNOWN:
         return False
 
     return True

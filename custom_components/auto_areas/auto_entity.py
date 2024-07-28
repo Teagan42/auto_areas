@@ -155,7 +155,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
                     self.entity_states[entity_id] = state
                 except ValueError:
                     LOGGER.warning(
-                        "No initial state available for %s", entity_id
+                        "No state available for %s", entity_id
                     )
 
         self._aggregated_state = self._get_state()
