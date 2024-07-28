@@ -197,7 +197,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONFIG_ILLUMINANCE_CALCULATION,
-                        default=DEFAULT_CALCULATION_ILLUMINANCE,  # type: ignore
+                        default=(self.config_entry.options or {}.get(
+                            CONFIG_ILLUMINANCE_CALCULATION,
+                            DEFAULT_CALCULATION_ILLUMINANCE
+                        )),  # type: ignore
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
@@ -208,7 +211,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ):  self.sensor_exclude_selector(SensorDeviceClass.ILLUMINANCE),
                     vol.Required(
                         CONFIG_TEMPERATURE_CALCULATION,
-                        default=DEFAULT_CALCULATION_TEMPERATURE,  # type: ignore
+                        default=(self.config_entry.options or {}.get(
+                            CONFIG_TEMPERATURE_CALCULATION,
+                            DEFAULT_CALCULATION_TEMPERATURE
+                        )),  # type: ignore
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
@@ -219,7 +225,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): self.sensor_exclude_selector(SensorDeviceClass.TEMPERATURE),
                     vol.Required(
                         CONFIG_HUMIDITY_CALCULATION,
-                        default=DEFAULT_CALCULATION_HUMIDITY,  # type: ignore
+                        default=(self.config_entry.options or {}.get(
+                            CONFIG_HUMIDITY_CALCULATION,
+                            DEFAULT_CALCULATION_HUMIDITY
+                        )),  # type: ignore
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
