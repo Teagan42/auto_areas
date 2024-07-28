@@ -201,7 +201,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
-                        default=[]  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+                            []
+                        )  # type: ignore
                     ):  self.sensor_exclude_selector(SensorDeviceClass.ILLUMINANCE),
                     vol.Required(
                         CONFIG_TEMPERATURE_CALCULATION,
@@ -209,7 +212,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
-                        default=[]  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
+                            []
+                        )  # type: ignore
                     ): self.sensor_exclude_selector(SensorDeviceClass.TEMPERATURE),
                     vol.Required(
                         CONFIG_HUMIDITY_CALCULATION,
@@ -217,7 +223,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): self.sensor_selector,
                     vol.Optional(
                         CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
-                        default=[]  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+                            []
+                        )  # type: ignore
                     ): self.sensor_exclude_selector(SensorDeviceClass.HUMIDITY)
                 }
             ),
