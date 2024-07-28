@@ -176,7 +176,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         if new_state:
             self._see_state(new_state)
 
-        LOGGER.info("%s - _aysnc_update_group_state")
+        LOGGER.info("%s - _aysnc_update_group_state", self.entity_id)
         self._aggregated_state = self._get_state()
 
     @callback

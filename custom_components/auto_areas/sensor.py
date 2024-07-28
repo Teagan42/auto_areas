@@ -26,8 +26,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     ])
 
 
+class AutoSensorEntity(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
+    """Set up aggregated sensor."""
+
+    @override
+    def _get_state(self) -> float | str | None:
+        self._attr_native_value = super()._get_state()
+        return self._attr_native_value
+
+
 class IlluminanceSensor(
-    AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity
+    AutoSensorEntity
 ):
     """Set up aggregated illuminance sensor."""
 
@@ -48,7 +57,7 @@ class IlluminanceSensor(
         return LIGHT_LUX
 
 
-class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
+class TemperatureSensor(AutoSensorEntity):
     """Set up aggregated temperature sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
@@ -68,7 +77,7 @@ class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass, float], Sens
         return self.hass.config.units.temperature_unit
 
 
-class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
+class HumiditySensor(AutoSensorEntity):
     """Set up aggregated humidity sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
