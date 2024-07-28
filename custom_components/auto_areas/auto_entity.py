@@ -34,6 +34,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
                  ) -> None:
         """Initialize sensor."""
         super().__init__()
+        self.should_poll = False
         self.hass = hass
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
