@@ -15,6 +15,7 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 from .auto_lights import AutoLights
 from .ha_helpers import get_all_entities, is_valid_entity
 from .const import (
+    CONFIG_LIGHT_CONTROL,
     CONFIG_AREA,
     DOMAIN,
     LOGGER,
@@ -71,6 +72,8 @@ class AutoArea:
             self.area_name
         )
 
+        if not self.config_entry.options.get(CONFIG_LIGHT_CONTROL, True):
+            return
         self.auto_lights = AutoLights(self)
         await self.auto_lights.initialize()
 

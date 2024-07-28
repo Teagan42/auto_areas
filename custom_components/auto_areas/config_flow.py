@@ -26,6 +26,7 @@ from .auto_area import AutoAreasError, AutoArea
 
 from .const import (
     CONFIG_AREA,
+    CONFIG_LIGHT_CONTROL,
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
     CONFIG_IS_SLEEPING_AREA,
@@ -116,6 +117,13 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             multiple=False,
                         )
                     ),
+                    vol.Optional(
+                        CONFIG_LIGHT_CONTROL,
+                        default=(user_input or {}).get(
+                            CONFIG_LIGHT_CONTROL, True)
+                    ): selector.BooleanSelector(
+                        selector.BooleanSelectorConfig()
+                    )
                 }
             ),
             errors=_errors,
@@ -161,6 +169,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONFIG_LIGHT_CONTROL,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_LIGHT_CONTROL
+                        ) or True  # type: ignore
+                    ): selector.BooleanSelector(
+                        selector.BooleanSelectorConfig()
+                    ),
                     vol.Required(
                         CONFIG_IS_SLEEPING_AREA,
                         default=(self.config_entry.options or {}).get(

@@ -4,7 +4,8 @@
             "init": {
                 "title": "🤖 Auto Area",
                 "data": {
-                    "area": "Area to manage"
+                    "area": "Area to manage",
+                    "light_control": "Presence based light control"
                 }
             }
         },
@@ -18,6 +19,7 @@
                 "title": "🤖 Auto Area",
                 "description": "Customize the behavior of this area.",
                 "data": {
+                    "light_control": "Presence based light control",
                     "is_sleeping_area": "Sleeping area",
                     "excluded_light_entities": "Excluded light entities:",
                     "auto_lights_illuminance_threshold": "Only turn on lights if area illuminance is below:",
