@@ -255,10 +255,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 device_registry,
                 area_id,
                 domains=[SENSOR_DOMAIN],
-                device_class=[device_class]
+                device_class=[device_class],
+                exclude_auto_areas=True
             )
         ]
-        LOGGER.info("_get_entities %s", ",".join(entities))
         return entities
 
     @property

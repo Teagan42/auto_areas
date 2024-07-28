@@ -6,6 +6,8 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
 
+from .const import DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -14,7 +16,8 @@ def get_all_entities(
     device_registry: DeviceRegistry,
     area_id: str,
     domains: list[str] | None = None,
-    device_class: list[str] | None = None
+    device_class: list[str] | None = None,
+    exclude_auto_areas: bool = False
 ) -> list[RegistryEntry]:
     """Return all entities from an area."""
     entities: list[RegistryEntry] = []
@@ -26,9 +29,11 @@ def get_all_entities(
         if domains is None or entity.domain not in domains:
             continue
 
-        if device_class is not None and entity.device_class not in device_class and entity.original_device_class not in device_class:
-            _LOGGER.info("%s %s is not a %s", _entity_id,
-                         entity.device_class, ",".join(device_class))
+        if device_class is not None and \
+                entity.device_class not in device_class and entity.original_device_class not in device_class:
+            continue
+
+        if exclude_auto_areas and entity.platform == DOMAIN:
             continue
 
         entities.append(entity)
