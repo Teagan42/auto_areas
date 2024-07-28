@@ -99,8 +99,7 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
     hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED,
                           async_entity_registry_updated)
     hass.bus.async_listen(EVENT_AREA_REGISTRY_UPDATED,
-                          async_area_registry_updated,
-                          lambda e: e["area_id"] == auto_area.area_id)
+                          async_area_registry_updated)
     hass.bus.async_listen(EVENT_DEVICE_REGISTRY_UPDATED,
                           async_device_registry_updated)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
