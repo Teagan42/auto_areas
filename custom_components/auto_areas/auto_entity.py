@@ -110,7 +110,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
                 self.auto_area.config_entry.options,
                 self.device_class
             ),
-            "entities": self.entity_states
+            "entities": {k: v.state for k, v in self.entity_states.items()}
         }
 
     async def async_added_to_hass(self):
