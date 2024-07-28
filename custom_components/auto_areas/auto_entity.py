@@ -265,6 +265,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
     def _get_state(self) -> _TState | str | None:
         """Get the state of the sensor."""
         if len(self.entity_states.values()) == 0:
+            self._attr_available = False
             return STATE_UNAVAILABLE
 
         calculate_state = get_calculation(
