@@ -125,30 +125,35 @@ DEFAULT_CALCULATION_TEMPERATURE = CALCULATE_MEAN
 DEFAULT_CALCULATION_HUMIDITY = CALCULATE_MAX
 
 
+def get_calculation_key(
+    config_options: Mapping[str, Any],
+    sensor_type: SensorDeviceClass | BinarySensorDeviceClass
+) -> str | None:
+    """Get the configured calculation key for the sensor provided."""
+    if sensor_type == SensorDeviceClass.ILLUMINANCE:
+        return config_options.get(
+            CONFIG_ILLUMINANCE_CALCULATION,
+            DEFAULT_CALCULATION_ILLUMINANCE)
+
+    if sensor_type == SensorDeviceClass.TEMPERATURE:
+        return config_options.get(
+            CONFIG_TEMPERATURE_CALCULATION,
+            DEFAULT_CALCULATION_TEMPERATURE)
+
+    if sensor_type == SensorDeviceClass.HUMIDITY:
+        return config_options.get(
+            CONFIG_HUMIDITY_CALCULATION,
+            DEFAULT_CALCULATION_HUMIDITY)
+
+    return None
+
+
 def get_calculation(
     config_options: Mapping[str, Any],
     sensor_type: SensorDeviceClass | BinarySensorDeviceClass
 ) -> Callable[[list[State]], StateType] | None:
     """Get the configured calculation for the sensor provided."""
-    if sensor_type == SensorDeviceClass.ILLUMINANCE:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_ILLUMINANCE_CALCULATION,
-                DEFAULT_CALCULATION_ILLUMINANCE),
-        )
-
-    if sensor_type == SensorDeviceClass.TEMPERATURE:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_TEMPERATURE_CALCULATION,
-                DEFAULT_CALCULATION_TEMPERATURE),
-        )
-
-    if sensor_type == SensorDeviceClass.HUMIDITY:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_HUMIDITY_CALCULATION,
-                DEFAULT_CALCULATION_HUMIDITY),
-        )
-
-    return None
+    key = get_calculation_key(config_options, sensor_type)
+    if key is None:
+        return None
+    return CALCULATE.get(key, None)

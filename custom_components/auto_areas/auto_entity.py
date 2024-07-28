@@ -1,7 +1,7 @@
 """Base auto-entity class."""
 
 from functools import cached_property
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, Mapping, TypeVar, cast
 
 from homeassistant.core import Event, EventStateChangedData, State, HomeAssistant, CALLBACK_TYPE
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
@@ -12,7 +12,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .calculations import get_calculation
+from .calculations import get_calculation, get_calculation_key
 from .auto_area import AutoArea
 from .const import (CONFIG_EXCLUDED_HUMIDITY_ENTITIES, CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
                     CONFIG_EXCLUDED_TEMPERATURE_ENTITIES, DOMAIN, LOGGER, NAME, VERSION)
@@ -96,6 +96,21 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             "model": VERSION,
             "manufacturer": NAME,
             "suggested_area": self.auto_area.area_name,
+        }
+
+    @cached_property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return entity specific state attributes.
+
+        Implemented by platform classes. Convention for attribute names
+        is lowercase snake_case.
+        """
+        return {
+            "calculation": get_calculation_key(
+                self.auto_area.config_entry.options,
+                self.device_class
+            ),
+            "entities": self.entity_states
         }
 
     async def async_added_to_hass(self):
