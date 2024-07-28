@@ -163,6 +163,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         """Reset tracked state."""
         self.entity_ids = self.get_sensor_entities()
         self.entity_states = {}
+        LOGGER.info("%s - Tracking %s", self.entity_id,
+                    ",".join(self.entity_ids))
         for entity_id in self.entity_ids:
             if (state := self.hass.states.get(entity_id)) is not None:
                 self._see_state(state)
@@ -215,6 +217,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         """
         if sorted(self.entity_ids) == sorted(self.get_sensor_entities()):
             return
+        LOGGER.info("%s - updating tracked entity ids", self.entity_id)
         self._async_stop()
         self._reset_tracked_state()
         self._async_start()
@@ -260,6 +263,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         ]:
             self.entity_states.pop(state.entity_id, None)
         else:
+            LOGGER.info("%s - State %s: %s", self.entity_id,
+                        state.entity_id, state.state)
             try:
                 to_state.state = float(to_state.state)  # type: ignore
                 self.entity_states[state.entity_id] = state
@@ -282,5 +287,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
                 self.device_class
             )
             return None
+        LOGGER.info("%s: Calculating", self.entity_id)
 
         return cast(_TState | str | None, calculate_state(list(self.entity_states.values())))
