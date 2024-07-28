@@ -161,6 +161,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
 
     def _reset_tracked_state(self) -> None:
         """Reset tracked state."""
+        LOGGER.info("%s - Reset tracked state", self.entity_id)
         self.entity_ids = self.get_sensor_entities()
         self.entity_states = {}
         LOGGER.info("%s - Tracking %s", self.entity_id,
@@ -241,6 +242,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
     @callback
     def _update_at_start(self, _: HomeAssistant) -> None:
         """Update the group state at start."""
+        self._reset_tracked_state()
         self.async_update_group_state()
         self.async_write_ha_state()
 
