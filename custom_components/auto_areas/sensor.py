@@ -3,6 +3,8 @@
 from functools import cached_property
 from typing import Any, override
 
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -14,7 +16,7 @@ from .auto_area import AutoArea
 from .const import DOMAIN, HUMIDITY_SENSOR_ENTITY_PREFIX, HUMIDITY_SENSOR_PREFIX, ILLUMINANCE_SENSOR_ENTITY_PREFIX, ILLUMINANCE_SENSOR_PREFIX, TEMPERATURE_SENSOR_ENTITY_PREFIX, TEMPERATURE_SENSOR_PREFIX
 
 
-async def async_setup_entry(hass, entry, async_add_entities: AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     """Set up the sensor platform."""
     auto_area: AutoArea = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([

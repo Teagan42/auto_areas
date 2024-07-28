@@ -4,9 +4,10 @@ import asyncio
 
 from homeassistant.helpers import issue_registry
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED, EventEntityRegistryUpdatedData
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback, Event
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 
 
@@ -50,10 +51,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoArea):
     """Initialize component."""
+    async def async_entity_registry_updated(event: Event[EventEntityRegistryUpdatedData]) -> None:
+        """Handle entity registry updated event."""
+        if event.data["action"] == "update":
+            if event.data["changes"].get("area_id", None) != auto_area.area_id:
+                # Event is update but no change in area, ignore event
+                return
+        # Create and Remove events do not attach entity data, have to check if there's any chage to entities manually
+        for auto_entity in auto_area.auto_entities.values():
+            current_ids = auto_entity.entity_ids
+            new_ids = auto_entity.get_sensor_entities()
+            if sorted(current_ids) == sorted(new_ids):
+                # No change in entity ids, check next auto entity
+                continue
+            auto_entity.entity_ids = new_ids
+            auto_entity.track_state_changes()
+        return
+
     await asyncio.sleep(5)  # wait for all area devices to be initialized
     await auto_area.async_initialize()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
+    hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED,
+                          async_entity_registry_updated)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True

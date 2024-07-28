@@ -1,5 +1,7 @@
 """Core area functionality."""
 from __future__ import annotations
+from ast import TypeVar
+from typing import Sequence, Union
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.area_registry import async_get as async_get_area_registry
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
@@ -9,6 +11,8 @@ from homeassistant.config_entries import ConfigEntry
 
 from homeassistant.helpers.area_registry import AreaEntry
 from homeassistant.helpers.entity_registry import RegistryEntry
+
+from custom_components.auto_areas.auto_entity import AutoEntity
 
 from .auto_lights import AutoLights
 
@@ -24,6 +28,11 @@ from .const import (
 
 class AutoAreasError(Exception):
     """Exception to indicate a general API error."""
+
+
+def flatten_ids(entity_ids: Sequence[Union[str, list[str]]]) -> list[str]:
+    """Flatten a list of lists."""
+    return [item for sublist in entity_ids for item in (flatten_ids(sublist) if isinstance(sublist, list) else [sublist])]
 
 
 class AutoArea:
@@ -45,6 +54,7 @@ class AutoArea:
         self.area: AreaEntry | None = self.area_registry.async_get_area(
             self.area_id or "")
         self.auto_lights = None
+        self.auto_entities: dict[str, AutoEntity] = {}
         if self.area_id is None or self.area is None:
             async_create_issue(
                 hass,
@@ -67,6 +77,11 @@ class AutoArea:
 
         self.auto_lights = AutoLights(self)
         await self.auto_lights.initialize()
+
+    @property
+    def tracked_entity_ids(self) -> list[str]:
+        """Tracked entity ids."""
+        return flatten_ids([auto_entity.entity_ids for auto_entity in self.auto_entities.values()])
 
     def cleanup(self):
         """Deinitialize this area."""

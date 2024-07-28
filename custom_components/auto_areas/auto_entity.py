@@ -3,7 +3,7 @@
 from functools import cached_property
 from typing import Generic, TypeVar, cast
 
-from homeassistant.core import Event, EventStateChangedData, State, HomeAssistant
+from homeassistant.core import Event, EventStateChangedData, State, HomeAssistant, CALLBACK_TYPE
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.helpers.entity import Entity
@@ -37,15 +37,16 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         super().__init__()
         self.hass = hass
         self.auto_area = auto_area
+        auto_area.auto_entities[device_class] = self
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
 
-        self.entity_ids: list[str] = self._get_sensor_entities()
+        self.entity_ids: list[str] = self.get_sensor_entities()
         self.unsubscribe = None
         self.entity_states: dict[str, State] = {}
         self._aggregated_state: StateType = None
-
+        self.unsubscribe: CALLBACK_TYPE | None = None
         LOGGER.info(
             "%s: Initialized %s sensor",
             self.auto_area.area_name,
@@ -63,7 +64,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             return self.auto_area.config_entry.options.get(CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES, [])
         return []
 
-    def _get_sensor_entities(self) -> list[str]:
+    def get_sensor_entities(self) -> list[str]:
         """Retrieve all relevant entity ids for this sensor."""
         return [
             entity.entity_id
@@ -122,11 +123,23 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self.schedule_update_ha_state()
 
         # Subscribe to state changes
+        self.track_state_changes()
+
+    def track_state_changes(self) -> None:
+        """Track entity state changes."""
+        if self.unsubscribe is not None:
+            self.unsubscribe()
         self.unsubscribe = async_track_state_change_event(
             self.hass,
             self.entity_ids,
             self._handle_state_change,
         )
+        entity_state_keys = self.entity_states.keys()
+        for entity_id in entity_state_keys:
+            # Remove any states no longer tracked
+            if entity_id in self.entity_ids:
+                continue
+            self.entity_states.pop(entity_id, None)
 
     async def _handle_state_change(self, event: Event[EventStateChangedData]):
         """Handle state change of any tracked illuminance sensors."""

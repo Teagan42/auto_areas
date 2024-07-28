@@ -63,7 +63,7 @@ class PresenceBinarySensor(
         return STATE_ON if is_on else STATE_OFF
 
     @override
-    def _get_sensor_entities(self) -> list[str]:
+    def get_sensor_entities(self) -> list[str]:
         """Retrieve all relevant presence entities."""
         return [
             entity.entity_id
