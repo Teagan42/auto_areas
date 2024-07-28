@@ -133,7 +133,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         """Track entity state changes."""
         entity_ids = self.get_sensor_entities()
         if sorted(entity_ids) == sorted(self.entity_ids):
-            LOGGER.info("%s - No change in entities, skipping", self.entity_id)
             return
         if self.unsubscribe:
             try:
@@ -141,7 +140,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             except ValueError:
                 pass
         self.unsubscribe = None
-        LOGGER.info("%s - Found %s", self.entity_id, ",".join(entity_ids))
         self.entity_ids = entity_ids
         for entity_id in [entity_id for entity_id in self.entity_states.keys() if entity_id not in entity_ids]:
             self.entity_states.pop(entity_id, None)
@@ -149,9 +147,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             state = self.hass.states.get(entity_id)
             await self._handle_state_change(Event(EVENT_STATE_CHANGED, data=EventStateChangedData(
                 entity_id=entity_id, new_state=state, old_state=None)))
-
-        LOGGER.info("%s - States %s", self.entity_id,
-                    ",".join([f"{k}: {v.state}" for k, v in self.entity_states.items()]))
 
         self.unsubscribe = async_track_state_change_event(
             self.hass,
@@ -186,14 +181,15 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
         self._aggregated_state = self._get_state()
 
-        LOGGER.info(
-            "%s: got state %s, %d entities",
+        LOGGER.debug(
+            "%s %s: got state %s, %d entities",
+            self.auto_area.area_name,
             self.device_class,
             str(self.state),
             len(self.entity_states.values())
         )
 
-        self.async_schedule_update_ha_state()
+        self.schedule_update_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Clean up event listeners."""
