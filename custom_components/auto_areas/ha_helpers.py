@@ -1,10 +1,12 @@
 """Collection of utility methods for dealing with HomeAssistant."""
 from typing import Optional
-
+import logging
 from homeassistant.core import HomeAssistant
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def get_all_entities(
@@ -25,6 +27,8 @@ def get_all_entities(
             continue
 
         if device_class is not None and entity.device_class not in device_class:
+            _LOGGER.info("%s %s is not a %s", _entity_id,
+                         entity.device_class, ",".join(device_class))
             continue
 
         entities.append(entity)
