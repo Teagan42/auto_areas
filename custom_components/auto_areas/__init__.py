@@ -59,7 +59,12 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
                 return
         # Create and Remove events do not attach entity data so assume there's been a change
         for auto_entity in auto_area.auto_entities.values():
-            await auto_entity.track_state_changes()
+            current_ids = auto_entity.entity_ids
+            new_ids = auto_entity.get_sensor_entities()
+            if sorted(current_ids) == sorted(new_ids):
+                # No change in entity ids, check next auto entity
+                continue
+            auto_entity.track_state_changes()
         return
 
     await asyncio.sleep(5)  # wait for all area devices to be initialized
