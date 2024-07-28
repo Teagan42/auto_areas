@@ -7,7 +7,6 @@ from homeassistant.core import Event, EventStateChangedData, State, HomeAssistan
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor.const import SensorDeviceClass
@@ -40,13 +39,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
         self.entity_states: dict[str, State] = {}
-        self._debouncer = Debouncer(
-            hass,
-            LOGGER,
-            cooldown=0.5,
-            immediate=False,
-            function=self._track_state_changes
-        )
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
@@ -134,7 +126,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         # Subscribe to state changes
         await self.track_state_changes()
 
-    async def _track_state_changes(self) -> None:
+    async def track_state_changes(self) -> None:
         """Track entity state changes."""
         entity_ids = self.get_sensor_entities()
         if sorted(entity_ids) == sorted(self.entity_ids):
@@ -166,13 +158,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             self.entity_ids,
             self._handle_state_change,
         )
-
-    async def track_state_changes(self) -> None:
-        """Track entity state changes."""
-        entity_ids = self.get_sensor_entities()
-        if sorted(entity_ids) == sorted(self.entity_ids):
-            return
-        await self._debouncer.async_call()
 
     async def _handle_state_change(self, event: Event[EventStateChangedData]):
         """Handle state change of any tracked illuminance sensors."""
