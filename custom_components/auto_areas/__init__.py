@@ -64,8 +64,7 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
             if sorted(current_ids) == sorted(new_ids):
                 # No change in entity ids, check next auto entity
                 continue
-            auto_entity.entity_ids = new_ids
-            auto_entity.track_state_changes()
+            auto_entity.track_state_changes(new_ids)
         return
 
     await asyncio.sleep(5)  # wait for all area devices to be initialized

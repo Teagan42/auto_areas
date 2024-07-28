@@ -38,13 +38,14 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self.hass = hass
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
+        self.entity_states: dict[str, State] = {}
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
 
         self.entity_ids: list[str] = self.get_sensor_entities()
         self.unsubscribe = None
-        self.entity_states: dict[str, State] = {}
+
         self._aggregated_state: StateType = None
         self.unsubscribe: CALLBACK_TYPE | None = None
         LOGGER.info(
@@ -125,10 +126,11 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         # Subscribe to state changes
         self.track_state_changes()
 
-    def track_state_changes(self) -> None:
+    def track_state_changes(self, entity_ids: list[str] | None = None) -> None:
         """Track entity state changes."""
         if self.unsubscribe is not None:
             self.unsubscribe()
+        self.entity_ids = entity_ids or self.entity_ids
         self.unsubscribe = async_track_state_change_event(
             self.hass,
             self.entity_ids,
