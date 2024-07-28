@@ -5,6 +5,8 @@ import asyncio
 from homeassistant.helpers import issue_registry
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.entity_registry import EVENT_ENTITY_REGISTRY_UPDATED, EventEntityRegistryUpdatedData
+from homeassistant.helpers.area_registry import EVENT_AREA_REGISTRY_UPDATED, EventAreaRegistryUpdatedData
+from homeassistant.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED, EventDeviceRegistryUpdatedData
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback, Event
@@ -65,13 +67,42 @@ async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoAre
                 # No change in entity ids, check next auto entity
                 continue
             auto_entity.track_state_changes()
-        return
+
+    async def async_area_registry_updated(event: Event[EventAreaRegistryUpdatedData]) -> None:
+        """Handle area registry updated."""
+        if event.data["area_id"] != auto_area.area_id:
+            return
+        for auto_entity in auto_area.auto_entities.values():
+            current_ids = auto_entity.entity_ids
+            new_ids = auto_entity.get_sensor_entities()
+            if sorted(current_ids) == sorted(new_ids):
+                # No change in entity ids, check next auto entity
+                continue
+            auto_entity.track_state_changes()
+
+    async def async_device_registry_updated(event: Event[EventDeviceRegistryUpdatedData]) -> None:
+        """Handle device registry updated."""
+        if event.data["action"] == "update":
+            if event.data["changes"].get("area_id", None) != auto_area.area_id:
+                return
+        for auto_entity in auto_area.auto_entities.values():
+            current_ids = auto_entity.entity_ids
+            new_ids = auto_entity.get_sensor_entities()
+            if sorted(current_ids) == sorted(new_ids):
+                # No change in entity ids, check next auto entity
+                continue
+            auto_entity.track_state_changes()
 
     await asyncio.sleep(5)  # wait for all area devices to be initialized
     await auto_area.async_initialize()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED,
                           async_entity_registry_updated)
+    hass.bus.async_listen(EVENT_AREA_REGISTRY_UPDATED,
+                          async_area_registry_updated,
+                          lambda e: e["area_id"] == auto_area.area_id)
+    hass.bus.async_listen(EVENT_DEVICE_REGISTRY_UPDATED,
+                          async_device_registry_updated)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
