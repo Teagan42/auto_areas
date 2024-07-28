@@ -21,6 +21,7 @@
                 "data": {
                     "light_control": "Presence based light control",
                     "is_sleeping_area": "Sleeping area",
+                    "presence_calculation": "Presence calculation:",
                     "excluded_light_entities": "Excluded light entities:",
                     "auto_lights_illuminance_threshold": "Only turn on lights if area illuminance is below:",
                     "humidity_calculation": "Humidity calculation:",
