@@ -7,6 +7,7 @@ from homeassistant.core import Event, EventStateChangedData, State, HomeAssistan
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor.const import SensorDeviceClass
@@ -39,11 +40,18 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self.auto_area = auto_area
         auto_area.auto_entities[device_class] = self
         self.entity_states: dict[str, State] = {}
+        self._debouncer = Debouncer(
+            hass,
+            LOGGER,
+            cooldown=1,
+            immediate=False,
+            function=self._track_state_changes
+        )
         self._device_class = device_class
         self._name_prefix = name_prefix
         self._prefix = prefix
 
-        self.entity_ids: list[str] = self.get_sensor_entities()
+        self.entity_ids: list[str] = []
 
         self._aggregated_state: StateType = None
         self.unsubscribe: CALLBACK_TYPE | None = None
@@ -123,7 +131,22 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
             self.entity_ids,
         )
 
-        # Get all current states
+        # Subscribe to state changes
+        await self.track_state_changes()
+
+    async def _track_state_changes(self) -> None:
+        """Track entity state changes."""
+        entity_ids = self.get_sensor_entities()
+        if sorted(entity_ids) == sorted(self.entity_ids):
+            return
+        if self.unsubscribe:
+            try:
+                self.unsubscribe()
+            except ValueError:
+                pass
+        self.unsubscribe = None
+
+        self.entity_states = {}
         for entity_id in self.entity_ids:
             state = self.hass.states.get(entity_id)
             if state is not None and state.state not in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
@@ -138,30 +161,15 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self._aggregated_state = self._get_state()
         self.schedule_update_ha_state()
 
-        # Subscribe to state changes
-        self.track_state_changes()
-
-    def track_state_changes(self, entity_ids: list[str] | None = None) -> None:
-        """Track entity state changes."""
-        if self.unsubscribe:
-            try:
-                self.unsubscribe()
-            except ValueError:
-                pass
-        self.unsubscribe = None
-
-        self.entity_ids = entity_ids or self.entity_ids
         self.unsubscribe = async_track_state_change_event(
             self.hass,
             self.entity_ids,
             self._handle_state_change,
         )
-        entity_state_keys = self.entity_states.keys()
-        for entity_id in entity_state_keys:
-            # Remove any states no longer tracked
-            if entity_id in self.entity_ids:
-                continue
-            self.entity_states.pop(entity_id, None)
+
+    async def track_state_changes(self) -> None:
+        """Track entity state changes."""
+        await self._debouncer.async_call()
 
     async def _handle_state_change(self, event: Event[EventStateChangedData]):
         """Handle state change of any tracked illuminance sensors."""

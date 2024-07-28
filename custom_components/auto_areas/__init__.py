@@ -50,20 +50,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_init(hass: HomeAssistant, entry: ConfigEntry, auto_area: AutoArea):
     """Initialize component."""
+
     async def async_entity_registry_updated(event: Event[EventEntityRegistryUpdatedData]) -> None:
         """Handle entity registry updated event."""
         if event.data["action"] == "update":
             if event.data["changes"].get("area_id", None) != auto_area.area_id:
                 # Event is update but no change in area, ignore event
                 return
-        # Create and Remove events do not attach entity data, have to check if there's any chage to entities manually
+        # Create and Remove events do not attach entity data so assume there's been a change
         for auto_entity in auto_area.auto_entities.values():
-            current_ids = auto_entity.entity_ids
-            new_ids = auto_entity.get_sensor_entities()
-            if sorted(current_ids) == sorted(new_ids):
-                # No change in entity ids, check next auto entity
-                continue
-            auto_entity.track_state_changes(new_ids)
+            auto_entity.track_state_changes()
         return
 
     await asyncio.sleep(5)  # wait for all area devices to be initialized
