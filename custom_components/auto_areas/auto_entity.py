@@ -43,7 +43,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
         self._prefix = prefix
 
         self.entity_ids: list[str] = self.get_sensor_entities()
-        self.unsubscribe = None
 
         self._aggregated_state: StateType = None
         self.unsubscribe: CALLBACK_TYPE | None = None
@@ -127,8 +126,13 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
 
     def track_state_changes(self, entity_ids: list[str] | None = None) -> None:
         """Track entity state changes."""
-        if self.unsubscribe is not None:
-            self.unsubscribe()
+        if self.unsubscribe:
+            try:
+                self.unsubscribe()
+            except ValueError:
+                pass
+        self.unsubscribe = None
+
         self.entity_ids = entity_ids or self.entity_ids
         self.unsubscribe = async_track_state_change_event(
             self.hass,
@@ -174,7 +178,11 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass]):
     async def async_will_remove_from_hass(self) -> None:
         """Clean up event listeners."""
         if self.unsubscribe:
-            self.unsubscribe()
+            try:
+                self.unsubscribe()
+            except ValueError:
+                pass
+        self.unsubscribe = None
 
     def _get_state(self) -> StateType | None:
         """Get the state of the sensor."""

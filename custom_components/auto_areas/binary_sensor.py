@@ -95,11 +95,7 @@ class PresenceBinarySensor(
         )
 
         # Subscribe to state changes
-        self.unsubscribe = async_track_state_change_event(
-            self.hass,
-            self.entity_ids,
-            self._handle_state_change,
-        )
+        self.track_state_changes()
 
     @override
     async def _handle_state_change(self, event: Event[EventStateChangedData]) -> None:
