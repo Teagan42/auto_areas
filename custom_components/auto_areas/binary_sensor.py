@@ -95,7 +95,7 @@ class PresenceBinarySensor(
         )
 
         # Subscribe to state changes
-        self.track_state_changes()
+        await self.track_state_changes()
 
     @override
     async def _handle_state_change(self, event: Event[EventStateChangedData]) -> None:
