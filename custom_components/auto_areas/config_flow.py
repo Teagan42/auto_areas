@@ -20,14 +20,6 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor.const import SensorDeviceClass, DOMAIN as SENSOR_DOMAIN
 from homeassistant.data_entry_flow import FlowResult
 
-from custom_components.auto_areas.calculations import (
-    CALCULATE_LAST,
-    CALCULATE_MAX,
-    CALCULATE_MEAN,
-    CALCULATE_MEDIAN,
-    CALCULATE_MIN,
-)
-
 from .ha_helpers import get_all_entities
 
 from .auto_area import AutoAreasError, AutoArea
@@ -51,6 +43,11 @@ from .calculations import (
     DEFAULT_CALCULATION_ILLUMINANCE,
     DEFAULT_CALCULATION_TEMPERATURE,
     DEFAULT_CALCULATION_HUMIDITY,
+    CALCULATE_LAST,
+    CALCULATE_MAX,
+    CALCULATE_MEAN,
+    CALCULATE_MEDIAN,
+    CALCULATE_MIN,
 )
 
 

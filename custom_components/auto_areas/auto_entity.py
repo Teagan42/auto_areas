@@ -12,8 +12,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.event import async_track_state_change_event
 
-from custom_components.auto_areas.calculations import get_calculation
-
+from .calculations import get_calculation
 from .auto_area import AutoArea
 from .const import (CONFIG_EXCLUDED_HUMIDITY_ENTITIES, CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
                     CONFIG_EXCLUDED_TEMPERATURE_ENTITIES, DOMAIN, LOGGER, NAME, VERSION)

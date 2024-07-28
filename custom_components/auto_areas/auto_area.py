@@ -12,12 +12,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.area_registry import AreaEntry
 from homeassistant.helpers.entity_registry import RegistryEntry
 
-from custom_components.auto_areas.auto_entity import AutoEntity
-
+from .auto_entity import AutoEntity
 from .auto_lights import AutoLights
-
 from .ha_helpers import get_all_entities, is_valid_entity
-
 from .const import (
     CONFIG_AREA,
     DOMAIN,

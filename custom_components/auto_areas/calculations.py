@@ -10,7 +10,7 @@ from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.typing import StateType
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 
-from custom_components.auto_areas.const import (
+from .const import (
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
     CONFIG_TEMPERATURE_CALCULATION
