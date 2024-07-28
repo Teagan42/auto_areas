@@ -268,7 +268,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
             LOGGER.info("%s - State %s: %s", self.entity_id,
                         state.entity_id, state.state)
             try:
-                to_state.state = float(to_state.state)  # type: ignore
+                state.state = float(state.state)  # type: ignore
                 self.entity_states[state.entity_id] = state
             except ValueError:
                 self.entity_states.pop(state.entity_id, None)
