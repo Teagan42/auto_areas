@@ -1,7 +1,7 @@
 """Core area functionality."""
 from __future__ import annotations
 from ast import TypeVar
-from typing import Sequence, Union
+from typing import Any, Sequence, Union
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.area_registry import async_get as async_get_area_registry
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
@@ -12,7 +12,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.area_registry import AreaEntry
 from homeassistant.helpers.entity_registry import RegistryEntry
 
-from .auto_entity import AutoEntity
 from .auto_lights import AutoLights
 from .ha_helpers import get_all_entities, is_valid_entity
 from .const import (
@@ -51,7 +50,7 @@ class AutoArea:
         self.area: AreaEntry | None = self.area_registry.async_get_area(
             self.area_id or "")
         self.auto_lights = None
-        self.auto_entities: dict[str, AutoEntity] = {}
+        self.auto_entities: dict[str, Any] = {}
         if self.area_id is None or self.area is None:
             async_create_issue(
                 hass,
