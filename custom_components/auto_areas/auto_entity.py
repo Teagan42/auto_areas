@@ -155,7 +155,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         if (new_state := event.data["new_state"]) is None:
             # The state was removed from the state machine
             self._reset_tracked_state()
-
+        LOGGER.info("%s - async_state-changed_listener", self.entity_id)
         self._async_update_group_state(new_state)
         self.async_write_ha_state()
 
@@ -176,6 +176,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         if new_state:
             self._see_state(new_state)
 
+        LOGGER.info("%s - _aysnc_update_group_state")
         self._aggregated_state = self._get_state()
 
     @callback
@@ -198,15 +199,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
             self._async_unsub_state_changed = async_track_state_change_event(
                 self.hass, self.entity_ids, self._async_state_changed_listener
             )
-
+        LOGGER.info("%s - _async_start_trackign", self.entity_id)
         self._async_update_group_state()
-
-    @callback
-    def _async_start(self, _: HomeAssistant | None = None) -> None:
-        """Start tracking members and write state."""
-        self._reset_tracked_state()
-        self._async_start_tracking()
-        self.async_write_ha_state()
 
     @callback
     def async_update_tracked_entity_ids(
@@ -221,7 +215,8 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         LOGGER.info("%s - updating tracked entity ids", self.entity_id)
         self._async_stop()
         self._reset_tracked_state()
-        self._async_start()
+        self._async_start_tracking()
+        self.async_write_ha_state()
 
     def _set_tracked(self, entity_ids: Collection[str] | None) -> None:
         """Tuple of entities to be tracked."""
@@ -237,6 +232,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
     @callback
     def async_update_group_state(self) -> None:
         """Abstract method to update the entity."""
+        LOGGER.info("%s - async_update_group_state", self.entity_id)
         self._async_update_group_state()
 
     @callback
@@ -251,7 +247,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
         """Only update once at start."""
         if not self.hass.is_running:
             return
-
+        LOGGER.info("%s - async_defer_or_update_ha_state", self.entity_id)
         self.async_update_group_state()
         self.async_write_ha_state()
 
@@ -268,7 +264,6 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
             LOGGER.info("%s - State %s: %s", self.entity_id,
                         state.entity_id, state.state)
             try:
-                state.state = float(state.state)  # type: ignore
                 self.entity_states[state.entity_id] = state
             except ValueError:
                 self.entity_states.pop(state.entity_id, None)
@@ -289,6 +284,7 @@ class AutoEntity(Entity, Generic[_TEntity, _TDeviceClass, _TState]):
                 self.device_class
             )
             return None
-        LOGGER.info("%s: Calculating", self.entity_id)
+        LOGGER.info("%s: Calculating from %s", self.entity_id, ",".join(
+            [f"{s.entity_id}: {s.state}" for s in self.entity_states.values()]))
 
         return cast(_TState | str | None, calculate_state(list(self.entity_states.values())))
