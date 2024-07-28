@@ -26,7 +26,7 @@ def get_all_entities(
         if domains is None or entity.domain not in domains:
             continue
 
-        if device_class is not None and entity.device_class not in device_class:
+        if device_class is not None and entity.device_class not in device_class and entity.original_device_class not in device_class:
             _LOGGER.info("%s %s is not a %s", _entity_id,
                          entity.device_class, ",".join(device_class))
             continue
