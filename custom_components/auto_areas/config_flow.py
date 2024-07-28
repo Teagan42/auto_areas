@@ -81,6 +81,10 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=area.name,
                     data=user_input,
+                    options={
+                        CONFIG_LIGHT_CONTROL: user_input.get(
+                            CONFIG_LIGHT_CONTROL, True)
+                    }
                 )
 
         return self.async_show_form(
@@ -172,8 +176,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required(
                         CONFIG_LIGHT_CONTROL,
                         default=(self.config_entry.options or {}).get(
-                            CONFIG_LIGHT_CONTROL
-                        ) or True  # type: ignore
+                            CONFIG_LIGHT_CONTROL,
+                            True
+                        )  # type: ignore
                     ): selector.BooleanSelector(
                         selector.BooleanSelectorConfig()
                     ),
