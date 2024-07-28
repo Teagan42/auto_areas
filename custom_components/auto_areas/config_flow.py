@@ -199,44 +199,26 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONFIG_ILLUMINANCE_CALCULATION,
                         default=DEFAULT_CALCULATION_ILLUMINANCE,  # type: ignore
                     ): self.sensor_selector,
-                    vol.Required(
+                    vol.Optional(
                         CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
                         default=[]  # type: ignore
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            include_entities=self._get_entities(
-                                SensorDeviceClass.ILLUMINANCE),
-                            multiple=True
-                        )
-                    ),
+                    ):  self.sensor_exclude_selector(SensorDeviceClass.ILLUMINANCE),
                     vol.Required(
                         CONFIG_TEMPERATURE_CALCULATION,
                         default=DEFAULT_CALCULATION_TEMPERATURE,  # type: ignore
                     ): self.sensor_selector,
-                    vol.Required(
+                    vol.Optional(
                         CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
                         default=[]  # type: ignore
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            include_entities=self._get_entities(
-                                SensorDeviceClass.TEMPERATURE),
-                            multiple=True
-                        )
-                    ),
+                    ): self.sensor_exclude_selector(SensorDeviceClass.TEMPERATURE),
                     vol.Required(
                         CONFIG_HUMIDITY_CALCULATION,
                         default=DEFAULT_CALCULATION_HUMIDITY,  # type: ignore
                     ): self.sensor_selector,
-                    vol.Required(
+                    vol.Optional(
                         CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
                         default=[]  # type: ignore
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            include_entities=self._get_entities(
-                                SensorDeviceClass.HUMIDITY),
-                            multiple=True
-                        )
-                    ),
+                    ): self.sensor_exclude_selector(SensorDeviceClass.HUMIDITY)
                 }
             ),
         )
@@ -276,6 +258,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 device_class=[device_class]
             )
         ]
+        LOGGER.info("_get_entities %s", ",".join(entities))
         return entities
 
     @property
@@ -292,5 +275,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ],
                 multiple=False,
                 mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
+
+    def sensor_exclude_selector(self, device_class: str) -> selector.Selector:
+        """Get the excluded entities selector configuration."""
+        return selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                include_entities=self._get_entities(device_class),
+                multiple=True
             )
         )

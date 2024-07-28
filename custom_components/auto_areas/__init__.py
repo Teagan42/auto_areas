@@ -10,7 +10,6 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback, Event
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 
-
 from .auto_area import (
     AutoArea,
 )
