@@ -48,12 +48,17 @@ HUMIDITY_SENSOR_ENTITY_PREFIX = "sensor.area_humidity_"
 # Config flow constants
 #
 CONFIG_AREA = "area"
+CONFIG_LIGHT_CONTROL = "light_control"
 CONFIG_IS_SLEEPING_AREA = "is_sleeping_area"
 CONFIG_EXCLUDED_LIGHT_ENTITIES = "excluded_light_entities"
 CONFIG_AUTO_LIGHTS_MAX_ILLUMINANCE = "auto_lights_illuminance_threshold"
+CONFIG_PRESENCE_CALCULATION = "presence_calculation"
 CONFIG_HUMIDITY_CALCULATION = "humidity_calculation"
 CONFIG_TEMPERATURE_CALCULATION = "temperature_calculation"
 CONFIG_ILLUMINANCE_CALCULATION = "illuminance_calculation"
+CONFIG_EXCLUDED_HUMIDITY_ENTITIES = "excluded_humidity_entities"
+CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES = "excluded_illuminance_entities"
+CONFIG_EXCLUDED_TEMPERATURE_ENTITIES = "excluded_temperature_entities"
 
 #
 

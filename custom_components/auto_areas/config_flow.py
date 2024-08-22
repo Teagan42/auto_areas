@@ -17,16 +17,8 @@ from homeassistant.helpers import (
 import homeassistant.helpers.selector as selector
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor.const import SensorDeviceClass
+from homeassistant.components.sensor.const import SensorDeviceClass, DOMAIN as SENSOR_DOMAIN
 from homeassistant.data_entry_flow import FlowResult
-
-from custom_components.auto_areas.calculations import (
-    CALCULATE_LAST,
-    CALCULATE_MAX,
-    CALCULATE_MEAN,
-    CALCULATE_MEDIAN,
-    CALCULATE_MIN,
-)
 
 from .ha_helpers import get_all_entities
 
@@ -34,12 +26,17 @@ from .auto_area import AutoAreasError, AutoArea
 
 from .const import (
     CONFIG_AREA,
+    CONFIG_LIGHT_CONTROL,
+    CONFIG_PRESENCE_CALCULATION,
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
     CONFIG_IS_SLEEPING_AREA,
     CONFIG_EXCLUDED_LIGHT_ENTITIES,
     CONFIG_AUTO_LIGHTS_MAX_ILLUMINANCE,
     CONFIG_TEMPERATURE_CALCULATION,
+    CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+    CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+    CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
     DOMAIN,
     LOGGER,
 )
@@ -48,6 +45,15 @@ from .calculations import (
     DEFAULT_CALCULATION_ILLUMINANCE,
     DEFAULT_CALCULATION_TEMPERATURE,
     DEFAULT_CALCULATION_HUMIDITY,
+    DEFAULT_CALCULATION_PRESENCE,
+    CALCULATE_ALL,
+    CALCULATE_NONE,
+    CALCULATE_ONE,
+    CALCULATE_LAST,
+    CALCULATE_MAX,
+    CALCULATE_MEAN,
+    CALCULATE_MEDIAN,
+    CALCULATE_MIN,
 )
 
 
@@ -80,6 +86,10 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=area.name,
                     data=user_input,
+                    options={
+                        CONFIG_LIGHT_CONTROL: user_input.get(
+                            CONFIG_LIGHT_CONTROL, True)
+                    }
                 )
 
         return self.async_show_form(
@@ -116,6 +126,13 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             multiple=False,
                         )
                     ),
+                    vol.Optional(
+                        CONFIG_LIGHT_CONTROL,
+                        default=(user_input or {}).get(
+                            CONFIG_LIGHT_CONTROL, True)
+                    ): selector.BooleanSelector(
+                        selector.BooleanSelectorConfig()
+                    )
                 }
             ),
             errors=_errors,
@@ -162,6 +179,33 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(
+                        CONFIG_LIGHT_CONTROL,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_LIGHT_CONTROL,
+                            True
+                        )  # type: ignore
+                    ): selector.BooleanSelector(
+                        selector.BooleanSelectorConfig()
+                    ),
+                    vol.Required(
+                        CONFIG_PRESENCE_CALCULATION,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_PRESENCE_CALCULATION,
+                            DEFAULT_CALCULATION_PRESENCE
+                        )  # type: ignore
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                CALCULATE_ALL,
+                                CALCULATE_ONE,
+                                CALCULATE_NONE,
+                                CALCULATE_LAST,
+                            ],
+                            multiple=False,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(
                         CONFIG_IS_SLEEPING_AREA,
                         default=(self.config_entry.options or {}).get(
                             CONFIG_IS_SLEEPING_AREA
@@ -197,16 +241,46 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                     vol.Required(
                         CONFIG_ILLUMINANCE_CALCULATION,
-                        default=DEFAULT_CALCULATION_ILLUMINANCE,  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_ILLUMINANCE_CALCULATION,
+                            DEFAULT_CALCULATION_ILLUMINANCE
+                        ),  # type: ignore
                     ): self.sensor_selector,
+                    vol.Optional(
+                        CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_ILLUMINANCE_ENTITIES,
+                            []
+                        )  # type: ignore
+                    ):  self.sensor_exclude_selector(SensorDeviceClass.ILLUMINANCE),
                     vol.Required(
                         CONFIG_TEMPERATURE_CALCULATION,
-                        default=DEFAULT_CALCULATION_TEMPERATURE,  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_TEMPERATURE_CALCULATION,
+                            DEFAULT_CALCULATION_TEMPERATURE
+                        ),  # type: ignore
                     ): self.sensor_selector,
+                    vol.Optional(
+                        CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_TEMPERATURE_ENTITIES,
+                            []
+                        )  # type: ignore
+                    ): self.sensor_exclude_selector(SensorDeviceClass.TEMPERATURE),
                     vol.Required(
                         CONFIG_HUMIDITY_CALCULATION,
-                        default=DEFAULT_CALCULATION_HUMIDITY,  # type: ignore
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_HUMIDITY_CALCULATION,
+                            DEFAULT_CALCULATION_HUMIDITY
+                        ),  # type: ignore
                     ): self.sensor_selector,
+                    vol.Optional(
+                        CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+                        default=(self.config_entry.options or {}).get(
+                            CONFIG_EXCLUDED_HUMIDITY_ENTITIES,
+                            []
+                        )  # type: ignore
+                    ): self.sensor_exclude_selector(SensorDeviceClass.HUMIDITY)
                 }
             ),
         )
@@ -229,6 +303,26 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         ]
         return entities
 
+    def _get_entities(self, device_class: str) -> list[str]:
+        """Return a list of selectable entities."""
+        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
+        area_id = self.config_entry.data.get(CONFIG_AREA)
+        if area_id is None:
+            raise ValueError(f"Missing {CONFIG_AREA} configruation value.")
+        entities = [
+            entity.entity_id
+            for entity in get_all_entities(
+                entity_registry,
+                device_registry,
+                area_id,
+                domains=[SENSOR_DOMAIN],
+                device_class=[device_class],
+                exclude_auto_areas=True
+            )
+        ]
+        return entities
+
     @property
     def sensor_selector(self) -> selector.Selector:
         """Get the sensor selector configuration."""
@@ -243,5 +337,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ],
                 multiple=False,
                 mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
+
+    def sensor_exclude_selector(self, device_class: str) -> selector.Selector:
+        """Get the excluded entities selector configuration."""
+        return selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                include_entities=self._get_entities(device_class),
+                multiple=True
             )
         )

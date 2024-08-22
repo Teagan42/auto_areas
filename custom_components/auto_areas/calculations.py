@@ -10,9 +10,10 @@ from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.typing import StateType
 from homeassistant.const import STATE_UNKNOWN, STATE_UNAVAILABLE
 
-from custom_components.auto_areas.const import (
+from .const import (
     CONFIG_HUMIDITY_CALCULATION,
     CONFIG_ILLUMINANCE_CALCULATION,
+    CONFIG_PRESENCE_CALCULATION,
     CONFIG_TEMPERATURE_CALCULATION
 )
 
@@ -38,14 +39,32 @@ def is_bool(state: State) -> bool:
     """Check if state is a boolean."""
     try:
         return isinstance(state.state, bool) or state.state in [
-            "on", "yes", "true", "1", True, 1]
+            "on", "off", "yes", "no", "true", "false", "1", "0", True, False, 1, 0]
     except Exception:
         return False
 
 
+def as_bool(state: State) -> bool:
+    """Convert state to a boolean."""
+    if isinstance(state.state, bool):
+        return bool(state.state)
+    return state.state in [
+        "on", "yes", "true", "1", True, 1]
+
+
+def float_states(states: list[State]) -> list[float]:
+    """Filter and retrieve floats from list of states."""
+    return [float(s.state) for s in states if is_float(s)]
+
+
+def bool_states(states: list[State]) -> list[bool]:
+    """Filter and retrieve bools from list of states."""
+    return [as_bool(s) for s in states if is_bool(s)]
+
+
 def calculate_max(states: list[State]) -> StateType:
     """Calculate the maximum of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return max(calc_values)
@@ -53,7 +72,7 @@ def calculate_max(states: list[State]) -> StateType:
 
 def calculate_min(states: list[State]) -> StateType:
     """Calculate the min of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return min(calc_values)
@@ -61,7 +80,7 @@ def calculate_min(states: list[State]) -> StateType:
 
 def calculate_mean(states: list[State]) -> StateType:
     """Calculate the mean of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return mean(calc_values)
@@ -69,7 +88,7 @@ def calculate_mean(states: list[State]) -> StateType:
 
 def calculate_median(states: list[State]) -> StateType:
     """Calculate the median of the list of values."""
-    calc_values = [float(s.state) for s in states if is_float(s)]
+    calc_values = float_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return median(calc_values)
@@ -77,7 +96,7 @@ def calculate_median(states: list[State]) -> StateType:
 
 def calculate_all(states: list[State]) -> StateType:
     """Calculate whether all of the list of values are true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if not v]) == 0
@@ -85,7 +104,7 @@ def calculate_all(states: list[State]) -> StateType:
 
 def calculate_one(states: list[State]) -> StateType:
     """Calculate whether one of the list of values is true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if v]) > 0
@@ -93,7 +112,7 @@ def calculate_one(states: list[State]) -> StateType:
 
 def calculate_none(states: list[State]) -> StateType:
     """Calculate whether none of the list of values is true."""
-    calc_values = [s.state for s in states if is_bool(s)]
+    calc_values = bool_states(states)
     if len(calc_values) == 0:
         return STATE_UNKNOWN
     return len([v for v in calc_values if v]) == 0
@@ -123,6 +142,34 @@ CALCULATE = {
 DEFAULT_CALCULATION_ILLUMINANCE = CALCULATE_LAST
 DEFAULT_CALCULATION_TEMPERATURE = CALCULATE_MEAN
 DEFAULT_CALCULATION_HUMIDITY = CALCULATE_MAX
+DEFAULT_CALCULATION_PRESENCE = CALCULATE_ALL
+
+
+def get_calculation_key(
+    config_options: Mapping[str, Any],
+    sensor_type: SensorDeviceClass | BinarySensorDeviceClass
+) -> str | None:
+    """Get the configured calculation key for the sensor provided."""
+    if sensor_type == SensorDeviceClass.ILLUMINANCE:
+        return config_options.get(
+            CONFIG_ILLUMINANCE_CALCULATION,
+            DEFAULT_CALCULATION_ILLUMINANCE)
+
+    if sensor_type == SensorDeviceClass.TEMPERATURE:
+        return config_options.get(
+            CONFIG_TEMPERATURE_CALCULATION,
+            DEFAULT_CALCULATION_TEMPERATURE)
+
+    if sensor_type == SensorDeviceClass.HUMIDITY:
+        return config_options.get(
+            CONFIG_HUMIDITY_CALCULATION,
+            DEFAULT_CALCULATION_HUMIDITY)
+    if sensor_type in [BinarySensorDeviceClass.MOTION, BinarySensorDeviceClass.PRESENCE, BinarySensorDeviceClass.OCCUPANCY]:
+        return config_options.get(
+            CONFIG_PRESENCE_CALCULATION,
+            DEFAULT_CALCULATION_PRESENCE
+        )
+    return None
 
 
 def get_calculation(
@@ -130,25 +177,7 @@ def get_calculation(
     sensor_type: SensorDeviceClass | BinarySensorDeviceClass
 ) -> Callable[[list[State]], StateType] | None:
     """Get the configured calculation for the sensor provided."""
-    if sensor_type == SensorDeviceClass.ILLUMINANCE:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_ILLUMINANCE_CALCULATION,
-                DEFAULT_CALCULATION_ILLUMINANCE),
-        )
-
-    if sensor_type == SensorDeviceClass.TEMPERATURE:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_TEMPERATURE_CALCULATION,
-                DEFAULT_CALCULATION_TEMPERATURE),
-        )
-
-    if sensor_type == SensorDeviceClass.HUMIDITY:
-        return CALCULATE.get(
-            config_options.get(
-                CONFIG_HUMIDITY_CALCULATION,
-                DEFAULT_CALCULATION_HUMIDITY),
-        )
-
-    return None
+    key = get_calculation_key(config_options, sensor_type)
+    if key is None:
+        return None
+    return CALCULATE.get(key, None)

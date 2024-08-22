@@ -3,13 +3,15 @@
 from functools import cached_property
 from typing import Any, override
 
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import LIGHT_LUX, PERCENTAGE
+from homeassistant.const import LIGHT_LUX, PERCENTAGE, STATE_UNKNOWN
 
 from .auto_entity import AutoEntity
-
+from .calculations import calculate_min, calculate_max
 from .auto_area import AutoArea
 from .const import (
     DOMAIN,
@@ -22,7 +24,7 @@ from .const import (
 )
 
 
-async def async_setup_entry(hass, entry, async_add_entities: AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     """Set up the sensor platform."""
     auto_area: AutoArea = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
@@ -32,8 +34,25 @@ async def async_setup_entry(hass, entry, async_add_entities: AddEntitiesCallback
     ])
 
 
+class AutoSensorEntity(AutoEntity[SensorEntity, SensorDeviceClass, float], SensorEntity):
+    """Set up aggregated sensor."""
+
+    @override
+    def _get_state(self) -> float | str | None:
+        self._attr_native_value = super()._get_state()
+        values = list(self.entity_states.values())
+        if len(values) == 0:
+            self._extra_attributes = {}
+        else:
+            self._extra_attributes = {
+                "min": calculate_min(values),
+                "max": calculate_max(values)
+            }
+        return self._attr_native_value
+
+
 class IlluminanceSensor(
-    AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity
+    AutoSensorEntity
 ):
     """Set up aggregated illuminance sensor."""
 
@@ -53,13 +72,8 @@ class IlluminanceSensor(
         """Return unit of measurement."""
         return LIGHT_LUX
 
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state
 
-
-class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
+class TemperatureSensor(AutoSensorEntity):
     """Set up aggregated temperature sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
@@ -78,14 +92,8 @@ class TemperatureSensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntit
         """Return unit of measurement."""
         return self.hass.config.units.temperature_unit
 
-    @override
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state
 
-
-class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
+class HumiditySensor(AutoSensorEntity):
     """Set up aggregated humidity sensor."""
 
     def __init__(self, hass, auto_area: AutoArea) -> None:
@@ -103,9 +111,3 @@ class HumiditySensor(AutoEntity[SensorEntity, SensorDeviceClass], SensorEntity):
     def native_unit_of_measurement(self) -> str | None:
         """Return unit of measurement."""
         return PERCENTAGE
-
-    @override
-    @cached_property
-    def state(self) -> Any:  # type: ignore
-        """Return the state of the entity."""
-        return self._aggregated_state

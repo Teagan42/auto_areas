@@ -1,10 +1,14 @@
 """Collection of utility methods for dealing with HomeAssistant."""
 from typing import Optional
-
+import logging
 from homeassistant.core import HomeAssistant
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
+
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def get_all_entities(
@@ -12,6 +16,8 @@ def get_all_entities(
     device_registry: DeviceRegistry,
     area_id: str,
     domains: list[str] | None = None,
+    device_class: list[str] | None = None,
+    exclude_auto_areas: bool = False
 ) -> list[RegistryEntry]:
     """Return all entities from an area."""
     entities: list[RegistryEntry] = []
@@ -21,6 +27,13 @@ def get_all_entities(
             continue
 
         if domains is None or entity.domain not in domains:
+            continue
+
+        if device_class is not None and \
+                entity.device_class not in device_class and entity.original_device_class not in device_class:
+            continue
+
+        if exclude_auto_areas and entity.platform == DOMAIN:
             continue
 
         entities.append(entity)
@@ -64,7 +77,7 @@ def is_valid_entity(hass: HomeAssistant, entity: RegistryEntry) -> bool:
         return False
 
     entity_state = hass.states.get(entity.entity_id)
-    if entity_state and entity_state.state == STATE_UNAVAILABLE:
+    if not entity_state or entity_state.state == STATE_UNAVAILABLE or entity_state.state == STATE_UNKNOWN:
         return False
 
     return True
