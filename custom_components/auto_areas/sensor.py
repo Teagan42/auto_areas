@@ -13,7 +13,15 @@ from homeassistant.const import LIGHT_LUX, PERCENTAGE, STATE_UNKNOWN
 from .auto_entity import AutoEntity
 from .calculations import calculate_min, calculate_max
 from .auto_area import AutoArea
-from .const import DOMAIN, HUMIDITY_SENSOR_ENTITY_PREFIX, HUMIDITY_SENSOR_PREFIX, ILLUMINANCE_SENSOR_ENTITY_PREFIX, ILLUMINANCE_SENSOR_PREFIX, TEMPERATURE_SENSOR_ENTITY_PREFIX, TEMPERATURE_SENSOR_PREFIX
+from .const import (
+    DOMAIN,
+    HUMIDITY_SENSOR_ENTITY_PREFIX,
+    HUMIDITY_SENSOR_PREFIX,
+    ILLUMINANCE_SENSOR_ENTITY_PREFIX,
+    ILLUMINANCE_SENSOR_PREFIX,
+    TEMPERATURE_SENSOR_ENTITY_PREFIX,
+    TEMPERATURE_SENSOR_PREFIX
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):

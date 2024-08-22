@@ -18,6 +18,7 @@ from .const import (
     CONFIG_LIGHT_CONTROL,
     CONFIG_AREA,
     DOMAIN,
+    ISSUE_TYPE_INVALID_AREA,
     LOGGER,
     RELEVANT_DOMAINS,
 )
@@ -56,14 +57,16 @@ class AutoArea:
             async_create_issue(
                 hass,
                 DOMAIN,
-                f"invalid_area_config_{entry.entry_id}",
+                f"{ISSUE_TYPE_INVALID_AREA}_{entry.entry_id}",
                 is_fixable=True,
                 severity=IssueSeverity.ERROR,
-                translation_key="invalid_area_config",
+                translation_key=ISSUE_TYPE_INVALID_AREA,
                 data={
                     "entry_id": entry.entry_id
                 }
             )
+
+        self.auto_lights = None
 
     async def async_initialize(self):
         """Subscribe to area changes and reload if necessary."""
